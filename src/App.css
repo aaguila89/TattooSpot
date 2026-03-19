@@ -1331,3 +1331,32 @@ body {
   color: #c84b2f;
   cursor: pointer;
 }
+/* AUTH ERROR */
+.auth-error {
+  background: rgba(200,75,47,0.1);
+  color: #c84b2f;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  text-align: center;
+}
+/* STEP INDICATOR */
+.step-indicator {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.step-dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: rgba(0,0,0,0.08);
+  transition: all 0.3s;
+}
+
+.step-dot.active {
+  background: #c84b2f;
+}

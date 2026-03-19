@@ -1,38 +1,91 @@
 import React, { useState } from 'react';
+import { auth, db } from '../firebase';
+import {
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  updateProfile
+} from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 function Signup({ setScreen }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('client');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleSignup() {
+  async function handleSignup() {
     if (name === '' || email === '' || password === '') {
-      alert('Please fill in all fields');
+      setError('Please fill in all fields');
       return;
     }
-    if (role === 'client') {
-      setScreen('client');
-    } else {
-      setScreen('artist');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
     }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(result.user, { displayName: name });
+      await setDoc(doc(db, 'users', result.user.uid), {
+        name,
+        email,
+        role,
+        createdAt: new Date().toISOString(),
+      });
+      if (role === 'client') {
+        setScreen('client');
+      } else {
+        setScreen('artistSetup');
+      }
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    }
+    setLoading(false);
+  }
+
+  async function handleGoogleSignup() {
+    setLoading(true);
+    setError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      await setDoc(doc(db, 'users', result.user.uid), {
+        name: result.user.displayName,
+        email: result.user.email,
+        role,
+        createdAt: new Date().toISOString(),
+      });
+      if (role === 'client') {
+        setScreen('client');
+      } else {
+        setScreen('artistSetup');
+      }
+    } catch (err) {
+      setError('Google sign up failed. Please try again.');
+    }
+    setLoading(false);
   }
 
   return (
     <div className="auth-page">
 
-      {/* LOGO */}
       <div className="auth-logo">
         Tattoo<span>Spot</span>
       </div>
       <p className="auth-tagline">WHERE ART MEETS SKIN</p>
 
-      {/* CARD */}
       <div className="auth-card">
         <h2 className="auth-title">Create Account</h2>
         <p className="auth-sub">Join TattooSpot today</p>
 
-        {/* ROLE TOGGLE */}
         <div className="role-toggle">
           <button
             className={`role-toggle-btn ${role === 'client' ? 'active' : ''}`}
@@ -48,7 +101,10 @@ function Signup({ setScreen }) {
           </button>
         </div>
 
-        {/* FORM */}
+        {error !== '' && (
+          <div className="auth-error">{error}</div>
+        )}
+
         <div className="form-group">
           <label className="form-label">FULL NAME</label>
           <input
@@ -76,7 +132,7 @@ function Signup({ setScreen }) {
           <input
             className="form-input"
             type="password"
-            placeholder="Create a password"
+            placeholder="Create a password (6+ characters)"
             value={password}
             onChange={e => setPassword(e.target.value)}
           />
@@ -87,15 +143,23 @@ function Signup({ setScreen }) {
           <span>Terms of Service</span> and <span>Privacy Policy</span>
         </div>
 
-        <button className="btn btn-primary" onClick={handleSignup}>
-          Create Account →
+        <button
+          className="btn btn-primary"
+          onClick={handleSignup}
+          disabled={loading}
+        >
+          {loading ? 'Creating account...' : 'Create Account →'}
         </button>
 
         <div className="auth-divider">
           <span>or</span>
         </div>
 
-        <button className="btn btn-google" onClick={handleSignup}>
+        <button
+          className="btn btn-google"
+          onClick={handleGoogleSignup}
+          disabled={loading}
+        >
           <span>🔵</span> Continue with Google
         </button>
 

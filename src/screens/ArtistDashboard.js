@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 
 const initialRequests = [
   {
@@ -45,6 +47,11 @@ function ArtistDashboard({ setScreen }) {
     ));
   }
 
+  function handleSignOut() {
+    signOut(auth);
+    setScreen('splash');
+  }
+
   const pending = requests.filter(r => r.status === 'pending').length;
 
   return (
@@ -53,7 +60,25 @@ function ArtistDashboard({ setScreen }) {
       {/* DASHBOARD HEADER */}
       <div className="dash-header">
         <div className="dash-greeting">Welcome back</div>
-        <div className="dash-name">Kenji Mori 🎨</div>
+        <div className="dash-name">
+          {auth.currentUser?.displayName || 'Artist'} 🎨
+        </div>
+        <button
+          onClick={handleSignOut}
+          style={{
+            background: 'rgba(255,255,255,0.1)',
+            border: 'none',
+            color: '#8a8580',
+            fontSize: '12px',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            marginTop: '8px',
+            fontFamily: 'inherit'
+          }}
+        >
+          Sign Out
+        </button>
         <div className="dash-stats">
           <div className="dash-stat">
             <div className="dash-stat-val">{pending}</div>
