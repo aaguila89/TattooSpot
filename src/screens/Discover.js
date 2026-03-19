@@ -9,7 +9,7 @@ const styleFilters = [
 
 const placeholderArtists = [
   {
-    id: '1',
+    id: 'placeholder-1',
     name: 'Kenji Mori',
     location: 'Brooklyn, NY',
     styles: ['Japanese', 'Neo-Traditional', 'Irezumi'],
@@ -20,10 +20,9 @@ const placeholderArtists = [
     available: true,
     emoji: '🐉',
     bg: '#1a1a2e',
-    placeholder: true,
   },
   {
-    id: '2',
+    id: 'placeholder-2',
     name: 'Sofia Reyes',
     location: 'Manhattan, NY',
     styles: ['Fine Line', 'Botanical', 'Minimalist'],
@@ -34,10 +33,9 @@ const placeholderArtists = [
     available: true,
     emoji: '🌸',
     bg: '#0d1117',
-    placeholder: true,
   },
   {
-    id: '3',
+    id: 'placeholder-3',
     name: 'Marcus Webb',
     location: 'Williamsburg, NY',
     styles: ['Blackwork', 'Geometric', 'Dark Art'],
@@ -48,11 +46,10 @@ const placeholderArtists = [
     available: false,
     emoji: '💀',
     bg: '#1c1410',
-    placeholder: true,
   },
 ];
 
-function Discover({ setScreen }) {
+function Discover({ setScreen, setSelectedArtist }) {
   const [activeFilter, setActiveFilter] = useState('All Styles');
   const [search, setSearch] = useState('');
   const [artists, setArtists] = useState(placeholderArtists);
@@ -92,6 +89,13 @@ function Discover({ setScreen }) {
       ));
     return matchesFilter && matchesSearch;
   });
+
+  function handleArtistClick(artist) {
+    if (setSelectedArtist) {
+      setSelectedArtist(artist);
+    }
+    setScreen('profile');
+  }
 
   return (
     <div className="page">
@@ -140,7 +144,7 @@ function Discover({ setScreen }) {
             <div
               className="artist-card"
               key={artist.id}
-              onClick={() => setScreen('profile')}
+              onClick={() => handleArtistClick(artist)}
             >
               <div className="artist-card-img" style={{ background: artist.bg }}>
                 <div className="mock-tattoo">{artist.emoji}</div>

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { db, auth } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 const dates = [
   { day: 'THU', num: '20' },
@@ -12,22 +14,46 @@ const times = [
   '4:00 PM', '6:00 PM', '8:00 PM'
 ];
 
-function Booking({ setScreen }) {
+function Booking({ setScreen, artistId, artistName }) {
   const [selectedDate, setSelectedDate] = useState('21');
   const [selectedTime, setSelectedTime] = useState('12:00 PM');
   const [style, setStyle] = useState('Japanese / Irezumi');
   const [placement, setPlacement] = useState('Full Sleeve');
   const [duration, setDuration] = useState('2 hours');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleSubmit() {
-    setScreen('confirmation');
+  async function handleSubmit() {
+    setLoading(true);
+    setError('');
+    try {
+      await addDoc(collection(db, 'bookings'), {
+        clientId: auth.currentUser?.uid,
+        clientName: auth.currentUser?.displayName,
+        clientEmail: auth.currentUser?.email,
+        artistId: artistId || 'demo-artist',
+        artistName: artistName || 'Kenji Mori',
+        date: `Mar ${selectedDate}`,
+        time: selectedTime,
+        style,
+        placement,
+        duration,
+        description,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+      setScreen('confirmation');
+    } catch (err) {
+      console.error('Booking error:', err);
+      setError('Something went wrong. Please try again.');
+    }
+    setLoading(false);
   }
 
   return (
     <div className="page">
 
-      {/* NAV */}
       <div className="nav">
         <button className="back-btn" onClick={() => setScreen('profile')}>← Back</button>
         <div className="nav-logo">Tattoo<span>Spot</span></div>
@@ -36,13 +62,15 @@ function Booking({ setScreen }) {
 
       <div className="content">
 
-        {/* HEADER */}
         <div className="section-header">
           <h2 className="page-title">Book a Session</h2>
-          <p className="page-sub">With Kenji Mori · Brooklyn, NY</p>
+          <p className="page-sub">With {artistName || 'Kenji Mori'} · Brooklyn, NY</p>
         </div>
 
-        {/* STYLE */}
+        {error !== '' && (
+          <div className="auth-error">{error}</div>
+        )}
+
         <div className="form-group">
           <label className="form-label">TATTOO STYLE</label>
           <select
@@ -57,7 +85,6 @@ function Booking({ setScreen }) {
           </select>
         </div>
 
-        {/* PLACEMENT */}
         <div className="form-group">
           <label className="form-label">PLACEMENT</label>
           <select
@@ -75,7 +102,6 @@ function Booking({ setScreen }) {
           </select>
         </div>
 
-        {/* DESCRIPTION */}
         <div className="form-group">
           <label className="form-label">DESCRIBE YOUR VISION</label>
           <textarea
@@ -86,7 +112,6 @@ function Booking({ setScreen }) {
           />
         </div>
 
-        {/* DATE PICKER */}
         <label className="form-label">SELECT DATE</label>
         <div className="date-grid">
           {dates.map(date => (
@@ -101,7 +126,6 @@ function Booking({ setScreen }) {
           ))}
         </div>
 
-        {/* TIME PICKER */}
         <label className="form-label">SELECT TIME</label>
         <div className="time-grid">
           {times.map(time => (
@@ -115,7 +139,6 @@ function Booking({ setScreen }) {
           ))}
         </div>
 
-        {/* DURATION */}
         <div className="form-group">
           <label className="form-label">ESTIMATED DURATION</label>
           <select
@@ -130,11 +153,10 @@ function Booking({ setScreen }) {
           </select>
         </div>
 
-        {/* SUMMARY CARD */}
         <div className="info-card" style={{ marginBottom: '16px' }}>
           <div className="booking-row">
             <span className="booking-row-label">Artist</span>
-            <span className="booking-row-val">Kenji Mori</span>
+            <span className="booking-row-val">{artistName || 'Kenji Mori'}</span>
           </div>
           <div className="booking-row">
             <span className="booking-row-label">Date</span>
@@ -158,9 +180,12 @@ function Booking({ setScreen }) {
           </div>
         </div>
 
-        {/* SUBMIT */}
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          Send Booking Request →
+        <button
+          className="btn btn-primary"
+          onClick={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? 'Sending Request...' : 'Send Booking Request →'}
         </button>
         <p className="booking-note">
           A $100 deposit will be collected upon artist approval

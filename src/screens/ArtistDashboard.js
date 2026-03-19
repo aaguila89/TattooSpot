@@ -1,50 +1,58 @@
-import React, { useState } from 'react';
-import { auth } from '../firebase';
+import React, { useState, useEffect } from 'react';
+import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
-
-const initialRequests = [
-  {
-    id: 1,
-    name: 'Alex Chen',
-    avatar: '👤',
-    style: 'Japanese · Full Sleeve · ~$1,800',
-    desc: "Looking for a full dragon sleeve in your Irezumi style. Reference: Hokusai-inspired waves with red dragon. Flexible on schedule.",
-    time: '2h ago',
-    status: 'pending',
-  },
-  {
-    id: 2,
-    name: 'Jamie Torres',
-    avatar: '👤',
-    style: 'Neo-Traditional · Back Piece · ~$2,400',
-    desc: "Huge fan of your work. Want a phoenix back piece for my 30th birthday. Would love to have a consult first.",
-    time: '5h ago',
-    status: 'pending',
-  },
-  {
-    id: 3,
-    name: 'Riley Kim',
-    avatar: '👤',
-    style: 'Japanese · Chest Piece · ~$900',
-    desc: "Looking for a koi fish chest piece. Love your use of color and water elements.",
-    time: '1d ago',
-    status: 'pending',
-  },
-];
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  updateDoc
+} from 'firebase/firestore';
 
 function ArtistDashboard({ setScreen }) {
-  const [requests, setRequests] = useState(initialRequests);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  function handleAccept(id) {
-    setRequests(requests.map(r =>
-      r.id === id ? { ...r, status: 'accepted' } : r
-    ));
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'bookings'),
+      where('artistId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const bookings = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setRequests(bookings);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  async function handleAccept(id) {
+    try {
+      await updateDoc(doc(db, 'bookings', id), {
+        status: 'accepted'
+      });
+    } catch (err) {
+      console.error('Error accepting booking:', err);
+    }
   }
 
-  function handleDecline(id) {
-    setRequests(requests.map(r =>
-      r.id === id ? { ...r, status: 'declined' } : r
-    ));
+  async function handleDecline(id) {
+    try {
+      await updateDoc(doc(db, 'bookings', id), {
+        status: 'declined'
+      });
+    } catch (err) {
+      console.error('Error declining booking:', err);
+    }
   }
 
   function handleSignOut() {
@@ -57,7 +65,6 @@ function ArtistDashboard({ setScreen }) {
   return (
     <div className="page">
 
-      {/* DASHBOARD HEADER */}
       <div className="dash-header">
         <div className="dash-greeting">Welcome back</div>
         <div className="dash-name">
@@ -85,12 +92,14 @@ function ArtistDashboard({ setScreen }) {
             <div className="dash-stat-lbl">New Requests</div>
           </div>
           <div className="dash-stat">
-            <div className="dash-stat-val">4</div>
-            <div className="dash-stat-lbl">This Week</div>
+            <div className="dash-stat-val">{requests.length}</div>
+            <div className="dash-stat-lbl">Total</div>
           </div>
           <div className="dash-stat">
-            <div className="dash-stat-val">$3.2k</div>
-            <div className="dash-stat-lbl">Earned</div>
+            <div className="dash-stat-val">
+              {requests.filter(r => r.status === 'accepted').length}
+            </div>
+            <div className="dash-stat-lbl">Accepted</div>
           </div>
         </div>
       </div>
@@ -101,20 +110,46 @@ function ArtistDashboard({ setScreen }) {
           <h2 className="page-title" style={{ fontSize: '20px' }}>
             Booking Requests
           </h2>
-          <p className="page-sub">{pending} pending requests</p>
+          <p className="page-sub">
+            {loading ? 'Loading...' : `${pending} pending requests`}
+          </p>
         </div>
+
+        {loading && (
+          <div className="empty-state">
+            <div className="empty-icon">⏳</div>
+            <p>Loading your bookings...</p>
+          </div>
+        )}
+
+        {!loading && requests.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">📅</div>
+            <p>No booking requests yet.<br />Share your profile to get started!</p>
+          </div>
+        )}
 
         {requests.map(request => (
           <div className="request-card" key={request.id}>
             <div className="request-top">
-              <div className="request-avatar">{request.avatar}</div>
+              <div className="request-avatar">👤</div>
               <div className="request-info">
-                <div className="request-name">{request.name}</div>
-                <div className="request-style">{request.style}</div>
+                <div className="request-name">{request.clientName}</div>
+                <div className="request-style">
+                  {request.style} · {request.placement}
+                </div>
               </div>
-              <div className="request-time">{request.time}</div>
+              <div className="request-time">
+                {new Date(request.createdAt).toLocaleDateString()}
+              </div>
             </div>
-            <div className="request-desc">{request.desc}</div>
+
+            <div className="request-desc">
+              📅 {request.date} at {request.time} · {request.duration}
+              {request.description && (
+                <div style={{ marginTop: '6px' }}>{request.description}</div>
+              )}
+            </div>
 
             {request.status === 'pending' && (
               <div className="request-actions">
@@ -149,7 +184,6 @@ function ArtistDashboard({ setScreen }) {
 
       </div>
 
-      {/* TAB BAR */}
       <div className="tab-bar">
         <button className="tab-item active">
           <span className="tab-icon">🏠</span>

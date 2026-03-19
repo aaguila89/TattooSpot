@@ -1,17 +1,36 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 function Login({ setScreen }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('client');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  async function redirectByRole(user) {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const role = userDoc.data().role;
+        if (role === 'artist') {
+          setScreen('dashboard');
+        } else {
+          setScreen('discover');
+        }
+      } else {
+        setScreen('discover');
+      }
+    } catch (err) {
+      console.error('Error getting role:', err);
+      setScreen('discover');
+    }
+  }
 
   async function handleLogin() {
     if (email === '' || password === '') {
@@ -21,12 +40,8 @@ function Login({ setScreen }) {
     setLoading(true);
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      if (role === 'client') {
-        setScreen('client');
-      } else {
-        setScreen('artist');
-      }
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      await redirectByRole(result.user);
     } catch (err) {
       setError('Invalid email or password. Please try again.');
     }
@@ -38,12 +53,8 @@ function Login({ setScreen }) {
     setError('');
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      if (role === 'client') {
-        setScreen('client');
-      } else {
-        setScreen('artist');
-      }
+      const result = await signInWithPopup(auth, provider);
+      await redirectByRole(result.user);
     } catch (err) {
       setError('Google sign in failed. Please try again.');
     }
@@ -61,21 +72,6 @@ function Login({ setScreen }) {
       <div className="auth-card">
         <h2 className="auth-title">Welcome Back</h2>
         <p className="auth-sub">Sign in to your account</p>
-
-        <div className="role-toggle">
-          <button
-            className={`role-toggle-btn ${role === 'client' ? 'active' : ''}`}
-            onClick={() => setRole('client')}
-          >
-            🔍 Client
-          </button>
-          <button
-            className={`role-toggle-btn ${role === 'artist' ? 'active' : ''}`}
-            onClick={() => setRole('artist')}
-          >
-            🎨 Artist
-          </button>
-        </div>
 
         {error !== '' && (
           <div className="auth-error">{error}</div>
