@@ -1,47 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
-const conversations = [
-  {
-    id: 1,
-    name: 'Kenji Mori',
-    avatar: '🎨',
-    preview: "I'd love to do that dragon sleeve! Can you share any reference images?",
-    time: '2m',
-    unread: true,
-  },
-  {
-    id: 2,
-    name: 'Sofia Reyes',
-    avatar: '🌸',
-    preview: 'Sure! I have an opening next Tuesday at 3pm',
-    time: '1h',
-    unread: false,
-  },
-  {
-    id: 3,
-    name: 'Marcus Webb',
-    avatar: '💀',
-    preview: 'Your booking is confirmed for Saturday ✓',
-    time: 'Yesterday',
-    unread: false,
-  },
-  {
-    id: 4,
-    name: 'Luna Park',
-    avatar: '🎨',
-    preview: 'That watercolor concept sounds amazing!',
-    time: '2d',
-    unread: false,
-  },
-];
+function Messages({ setScreen, setSelectedArtist }) {
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-function Messages({ setScreen }) {
+  useEffect(() => {
+    async function loadConversations() {
+      try {
+        console.log('Loading artists for messages...');
+        const snapshot = await getDocs(collection(db, 'artists'));
+        console.log('Artists found:', snapshot.docs.length);
+        const artists = snapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Artist data:', data);
+          return {
+            id: doc.id, // Always use Firestore document ID
+            ...data,
+          };
+        });
+        setConversations(artists);
+      } catch (err) {
+        console.error('Error loading conversations:', err);
+      }
+      setLoading(false);
+    }
+    loadConversations();
+  }, []);
+
+  function handleConvoClick(artist) {
+    console.log('Artist clicked:', artist.name, 'doc id:', artist.id, 'uid:', artist.uid);
+    if (setSelectedArtist) {
+      setSelectedArtist({
+        ...artist,
+        id: artist.id,
+      });
+    }
+    setScreen('chat');
+  }
+
   return (
     <div className="page">
 
       <div className="nav">
         <div className="nav-logo">Tattoo<span>Spot</span></div>
-        <button className="back-btn" onClick={() => setScreen('client')}>← Back</button>
+        <button className="back-btn" onClick={() => setScreen('discover')}>← Back</button>
       </div>
 
       <div className="content" style={{ padding: '20px 20px 100px' }}>
@@ -51,22 +55,39 @@ function Messages({ setScreen }) {
           <p className="page-sub">Your conversations</p>
         </div>
 
+        {loading && (
+          <div className="empty-state">
+            <div className="empty-icon">⏳</div>
+            <p>Loading conversations...</p>
+          </div>
+        )}
+
+        {!loading && conversations.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">💬</div>
+            <p>No artists available yet.<br />Check back soon!</p>
+          </div>
+        )}
+
         <div className="convo-list">
-          {conversations.map(convo => (
+          {conversations.map(artist => (
             <div
-              key={convo.id}
+              key={artist.id}
               className="convo-item"
-              onClick={() => setScreen('chat')}
+              onClick={() => handleConvoClick(artist)}
             >
               <div className="convo-avatar">
-                {convo.avatar}
-                {convo.unread && <div className="convo-dot"></div>}
+                🎨
               </div>
               <div className="convo-info">
-                <div className="convo-name">{convo.name}</div>
-                <div className="convo-preview">{convo.preview}</div>
+                <div className="convo-name">{artist.name}</div>
+                <div className="convo-preview">
+                  {artist.styles ? artist.styles.join(', ') : 'Tattoo Artist'}
+                </div>
               </div>
-              <div className="convo-time">{convo.time}</div>
+              <div className="convo-time">
+                {artist.location || ''}
+              </div>
             </div>
           ))}
         </div>
@@ -74,7 +95,7 @@ function Messages({ setScreen }) {
       </div>
 
       <div className="tab-bar">
-        <button className="tab-item" onClick={() => setScreen('client')}>
+        <button className="tab-item" onClick={() => setScreen('discover')}>
           <span className="tab-icon">🔍</span>
           <span className="tab-label">Discover</span>
         </button>

@@ -5,7 +5,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 function Login({ setScreen }) {
   const [email, setEmail] = useState('');
@@ -24,6 +24,12 @@ function Login({ setScreen }) {
           setScreen('discover');
         }
       } else {
+        await setDoc(doc(db, 'users', user.uid), {
+          name: user.displayName || 'User',
+          email: user.email,
+          role: 'client',
+          createdAt: new Date().toISOString(),
+        });
         setScreen('discover');
       }
     } catch (err) {

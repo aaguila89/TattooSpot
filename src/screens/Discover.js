@@ -58,15 +58,21 @@ function Discover({ setScreen, setSelectedArtist }) {
   useEffect(() => {
     async function loadArtists() {
       try {
+        console.log('Loading artists for messages...');
         const snapshot = await getDocs(collection(db, 'artists'));
-        const realArtists = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          match: Math.floor(Math.random() * 30) + 70,
-          emoji: '🎨',
-          bg: '#1a1a2e',
-          available: doc.data().available || true,
-        }));
+        console.log('Artists found:', snapshot.docs.length);
+        const realArtists = snapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Artist data:', data);
+          return {
+            id: doc.id, // Always use Firestore document ID
+            ...data,
+            match: Math.floor(Math.random() * 30) + 70,
+            emoji: '🎨',
+            bg: '#1a1a2e',
+            available: data.available || true,
+          };
+        });
         if (realArtists.length > 0) {
           setArtists([...realArtists, ...placeholderArtists]);
         }
@@ -91,8 +97,12 @@ function Discover({ setScreen, setSelectedArtist }) {
   });
 
   function handleArtistClick(artist) {
+    console.log('Artist clicked:', artist.name, 'doc id:', artist.id, 'uid:', artist.uid);
     if (setSelectedArtist) {
-      setSelectedArtist(artist);
+      setSelectedArtist({
+        ...artist,
+        id: artist.id,
+      });
     }
     setScreen('profile');
   }

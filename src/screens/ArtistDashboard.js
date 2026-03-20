@@ -10,7 +10,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
-function ArtistDashboard({ setScreen }) {
+function ArtistDashboard({ setScreen, handleSignOut: parentSignOut }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,8 +56,12 @@ function ArtistDashboard({ setScreen }) {
   }
 
   function handleSignOut() {
-    signOut(auth);
-    setScreen('splash');
+    if (parentSignOut) {
+      parentSignOut();
+    } else {
+      signOut(auth);
+      setScreen('splash');
+    }
   }
 
   const pending = requests.filter(r => r.status === 'pending').length;
@@ -193,7 +197,7 @@ function ArtistDashboard({ setScreen }) {
           <span className="tab-icon">🖼️</span>
           <span className="tab-label">Portfolio</span>
         </button>
-        <button className="tab-item" onClick={() => setScreen('messages')}>
+        <button className="tab-item" onClick={() => setScreen('artistMessages')}>
           <span className="tab-icon">💬</span>
           <span className="tab-label">Messages</span>
         </button>

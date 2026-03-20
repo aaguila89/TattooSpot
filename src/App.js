@@ -11,6 +11,8 @@ import Chat from './screens/Chat';
 import ArtistDashboard from './screens/ArtistDashboard';
 import ArtistPortfolio from './screens/ArtistPortfolio';
 import ArtistSetup from './screens/ArtistSetup';
+import ArtistMessages from './screens/ArtistMessages';
+import ArtistChat from './screens/ArtistChat';
 import Login from './screens/Login';
 import Signup from './screens/Signup';
 
@@ -19,14 +21,26 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedArtist, setSelectedArtist] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+      if (!currentUser) {
+        setSelectedArtist(null);
+        setSelectedClient(null);
+      }
     });
     return () => unsubscribe();
   }, []);
+
+  function handleSignOut() {
+    setSelectedArtist(null);
+    setSelectedClient(null);
+    signOut(auth);
+    setScreen('splash');
+  }
 
   if (loading) {
     return (
@@ -74,7 +88,7 @@ function App() {
             <div className="auth-switch" style={{ marginTop: '12px' }}>
               <span
                 style={{ color: '#8a8580', cursor: 'pointer' }}
-                onClick={() => signOut(auth)}
+                onClick={handleSignOut}
               >
                 Sign out
               </span>
@@ -111,12 +125,46 @@ function App() {
         />
       )}
       {screen === 'confirmation' && <Confirmation setScreen={setScreen} />}
-      {screen === 'messages' && <Messages setScreen={setScreen} />}
-      {screen === 'chat' && <Chat setScreen={setScreen} />}
-      {screen === 'dashboard' && <ArtistDashboard setScreen={setScreen} />}
-      {screen === 'artist' && <ArtistDashboard setScreen={setScreen} />}
+      {screen === 'messages' && (
+        <Messages
+          setScreen={setScreen}
+          setSelectedArtist={setSelectedArtist}
+        />
+      )}
+      {screen === 'chat' && (
+        <Chat
+          setScreen={setScreen}
+          artistId={selectedArtist?.id}
+          artistName={selectedArtist?.name}
+          artist={selectedArtist}
+        />
+      )}
+      {screen === 'dashboard' && (
+        <ArtistDashboard
+          setScreen={setScreen}
+          handleSignOut={handleSignOut}
+        />
+      )}
+      {screen === 'artist' && (
+        <ArtistDashboard
+          setScreen={setScreen}
+          handleSignOut={handleSignOut}
+        />
+      )}
       {screen === 'artistPortfolio' && <ArtistPortfolio setScreen={setScreen} />}
       {screen === 'artistSetup' && <ArtistSetup setScreen={setScreen} />}
+      {screen === 'artistMessages' && (
+        <ArtistMessages
+          setScreen={setScreen}
+          setSelectedClient={setSelectedClient}
+        />
+      )}
+      {screen === 'artistChat' && (
+        <ArtistChat
+          setScreen={setScreen}
+          client={selectedClient}
+        />
+      )}
     </div>
   );
 }

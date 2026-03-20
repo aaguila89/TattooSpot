@@ -8,7 +8,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 
-function Chat({ setScreen, artistId, artistName, artist }) {
+function ArtistChat({ setScreen, client }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -16,23 +16,20 @@ function Chat({ setScreen, artistId, artistName, artist }) {
 
   const currentUser = auth.currentUser;
 
-  // Use artist.uid if available otherwise use artistId
-  const realArtistId = artist?.uid || artistId;
-
-  const chatId = currentUser && realArtistId
-    ? [currentUser.uid, realArtistId].sort().join('_')
+  const chatId = currentUser && client
+    ? [currentUser.uid, client.id].sort().join('_')
     : null;
 
   useEffect(() => {
     if (!chatId) {
-      console.log('No chatId — user not logged in or no artist selected');
+      console.log('No chatId');
       setLoading(false);
       return;
     }
 
-    console.log('Chat ID:', chatId);
-    console.log('Current user:', currentUser?.uid);
-    console.log('Real Artist ID:', realArtistId);
+    console.log('Artist uid:', currentUser?.uid);
+    console.log('Client id:', client?.id);
+    console.log('Artist Chat ID:', chatId);
 
     const q = query(
       collection(db, 'chats', chatId, 'messages'),
@@ -44,7 +41,7 @@ function Chat({ setScreen, artistId, artistName, artist }) {
         id: doc.id,
         ...doc.data(),
       }));
-      console.log('Messages loaded:', msgs.length);
+      console.log('Messages found:', msgs.length);
       setMessages(msgs);
       setLoading(false);
       scrollToBottom();
@@ -64,22 +61,13 @@ function Chat({ setScreen, artistId, artistName, artist }) {
 
   async function sendMessage() {
     if (input.trim() === '') return;
-    if (!chatId) {
-      console.error('No chatId — cannot send message');
-      return;
-    }
-    if (!currentUser) {
-      console.error('No user logged in');
-      return;
-    }
+    if (!chatId || !currentUser) return;
 
     const text = input;
     setInput('');
 
-    console.log('Sending message to chat:', chatId);
-
     try {
-      const docRef = await addDoc(
+      await addDoc(
         collection(db, 'chats', chatId, 'messages'),
         {
           text,
@@ -88,10 +76,9 @@ function Chat({ setScreen, artistId, artistName, artist }) {
           createdAt: new Date().toISOString(),
         }
       );
-      console.log('Message sent successfully:', docRef.id);
       scrollToBottom();
     } catch (err) {
-      console.error('Error sending message:', err.code, err.message);
+      console.error('Error sending message:', err);
     }
   }
 
@@ -103,18 +90,12 @@ function Chat({ setScreen, artistId, artistName, artist }) {
     <div className="chat-wrap">
 
       <div className="chat-header">
-        <button className="back-btn" onClick={() => setScreen('messages')}>←</button>
-        <div className="chat-avatar">🎨</div>
+        <button className="back-btn" onClick={() => setScreen('artistMessages')}>←</button>
+        <div className="chat-avatar">👤</div>
         <div className="chat-info">
-          <div className="chat-name">{artistName || artist?.name || 'Artist'}</div>
+          <div className="chat-name">{client?.name || 'Client'}</div>
           <div className="chat-status">● Online</div>
         </div>
-        <button
-          className="chat-profile-btn"
-          onClick={() => setScreen('profile')}
-        >
-          View Profile
-        </button>
       </div>
 
       <div className="chat-messages">
@@ -154,7 +135,7 @@ function Chat({ setScreen, artistId, artistName, artist }) {
         <input
           className="chat-input"
           type="text"
-          placeholder={`Message ${artistName || artist?.name || 'Artist'}...`}
+          placeholder="Reply to client..."
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -165,5 +146,4 @@ function Chat({ setScreen, artistId, artistName, artist }) {
     </div>
   );
 }
-
-export default Chat;
+export default ArtistChat;
