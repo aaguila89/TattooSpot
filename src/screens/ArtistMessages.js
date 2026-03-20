@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { auth } from '../firebase';
 
 function ArtistMessages({ setScreen, setSelectedClient }) {
   const [clients, setClients] = useState([]);
@@ -10,10 +11,10 @@ function ArtistMessages({ setScreen, setSelectedClient }) {
     async function loadClients() {
       try {
         const snapshot = await getDocs(collection(db, 'users'));
-        const clientUsers = snapshot.docs
+        const allUsers = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(user => user.role === 'client');
-        setClients(clientUsers);
+          .filter(user => user.id !== auth.currentUser?.uid);
+        setClients(allUsers);
       } catch (err) {
         console.error('Error loading clients:', err);
       }
@@ -54,7 +55,7 @@ function ArtistMessages({ setScreen, setSelectedClient }) {
         {!loading && clients.length === 0 && (
           <div className="empty-state">
             <div className="empty-icon">💬</div>
-            <p>No client messages yet.<br />Accept bookings to start chatting!</p>
+            <p>No conversations yet.<br />Clients will appear here when they message you!</p>
           </div>
         )}
 
@@ -67,7 +68,7 @@ function ArtistMessages({ setScreen, setSelectedClient }) {
             >
               <div className="convo-avatar">👤</div>
               <div className="convo-info">
-                <div className="convo-name">{client.name}</div>
+                <div className="convo-name">{client.name || client.email}</div>
                 <div className="convo-preview">Tap to view conversation</div>
               </div>
               <div className="convo-time">Now</div>
